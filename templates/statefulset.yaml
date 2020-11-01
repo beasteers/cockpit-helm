@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "cockpit.fullname" . }}
+  labels:
+    {{- include "cockpit.labels" . | nindent 4 }}
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicas }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "cockpit.selectorLabels" . | nindent 6 }}
+  serviceName: {{ include "cockpit.fullname" . }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "cockpit.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "cockpit.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          {{- range $key, $value := .Values.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 8
+            failureThreshold: 2
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 2
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 3
+            failureThreshold: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: cockpit-config
+              mountPath: /var/www/html/config
+            {{ if .Values.persistence.enabled -}}
+            - name: cockpit-storage
+              mountPath: "/var/www/html/storage"
+              {{- if .Values.persistence.subPath }}
+              subPath: {{ .Values.persistence.subPath }}
+              {{- end }}
+            {{- end }}
+      initContainers:
+        - name: copy-config
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              (false | cp -irL /configmap/* /config) && \
+              mkdir -p config/cockpit/i18n && \
+              cd config/cockpit/i18n/ && \
+              {{ range $lang := .Values.languages -}}
+              [[ -f {{ $lang }}.php ]] || \
+              wget https://raw.githubusercontent.com/agentejo/cockpit-i18n/master/{{ $lang }}.php && \
+              {{ end -}}
+              {{ with .Values.config.i18n -}}
+              [[ -f {{ . }}.php ]] || \
+              wget https://raw.githubusercontent.com/agentejo/cockpit-i18n/master/{{ . }}.php && \
+              {{ end -}}
+              echo "yay!"
+          volumeMounts:
+            - name: cockpit-config
+              mountPath: /config
+            - name: cockpit-configmap
+              mountPath: /configmap
+      volumes:
+        - name: cockpit-config
+          emptyDir: {}
+        - name: cockpit-configmap
+          configMap:
+            name: cockpit-configmap
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+  {{ if .Values.persistence.enabled -}}
+  volumeClaimTemplates:
+   - metadata:
+       name: cockpit-storage
+     spec:
+       accessModes:
+        - ReadWriteMany
+       storageClassName: {{ .Values.persistence.storageClassName }}
+       resources:
+         requests:
+           storage: {{ .Values.persistence.size }}
+  {{- end }}
