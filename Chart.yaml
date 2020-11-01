@@ -37,6 +37,11 @@ long_description: |
   helm uninstall cockpit
   ```
 
+  To generate the README:
+  ```bash
+  frigate gen --output-format markdown . > README.md
+  ```
+
 # A chart can be either an 'application' or a 'library' chart.
 #
 # Application charts are a collection of templates that can be packaged into versioned archives

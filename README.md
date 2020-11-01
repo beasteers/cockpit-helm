@@ -34,9 +34,14 @@ helm install cockpit ./cockpit/charts/cockpit -f ./cockpit.values.yml
 ```
 Eventually, we should have something like `helm repo add cockpit.github.io/helm`
 
-## Uninstalling 
+## Uninstalling
 ```bash
 helm uninstall cockpit
+```
+
+To generate the README:
+```bash
+frigate gen --output-format markdown . > README.md
 ```
 
 ## Configuration
@@ -53,7 +58,8 @@ The following table lists the configurable parameters of the Cockpit chart and t
 | `nameOverride` | Override the ... something | `""` |
 | `fullnameOverride` | Override the pod/service/ingress names | `""` |
 | `config` | Cockpit configuration options. see https://getcockpit.com/documentation/reference/configuration | `{}` |
-| `extraEnv` | Extra environment variables | `{}` |
+| `languages` | Supported languages (use il8n code). source: https://github.com/agentejo/cockpit-i18n | `[]` |
+| `extraEnv` | Extra environment variables. | `{}` |
 | `service.type` | Kubernetes service type | `"ClusterIP"` |
 | `service.port` | Kubernetes port where service is exposed | `80` |
 | `ingress.enabled` | Enable ingress | `false` |
