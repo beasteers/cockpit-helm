@@ -39,6 +39,27 @@ Eventually, we should have something like `helm repo add cockpit.github.io/helm`
 helm uninstall cockpit
 ```
 
+## TODO:
+  - Add collection installation (either CRD or in values.yml)
+  - Add form installation
+  - Add singleton installation
+  - Add webhook installation
+I don't know if I really want to get into the complications of having to
+do this in a CRD, so the easiest thing to do would be to have this in `values.yml`:
+```
+collections:
+  somecollectionname:
+    data:
+      fields:
+        - ...
+```
+do that for each asset type and write each to their own config map.
+
+Then in the initContainer count the configmap, loop thru the files and post them to cockpit. maybe check that they already exist so you don't overwrite manual changes.
+
+For collection update endpoints: https://getcockpit.com/documentation/api/collections
+
+## Notes
 To generate the README:
 ```bash
 frigate gen --output-format markdown . > README.md

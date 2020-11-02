@@ -88,13 +88,13 @@ spec:
               cd config/cockpit/i18n/ && \
               {{ range $lang := .Values.languages -}}
               [[ -f {{ $lang }}.php ]] || \
-              wget https://raw.githubusercontent.com/agentejo/cockpit-i18n/master/{{ $lang }}.php && \
+              wget https://raw.githubusercontent.com/agentejo/cockpit-i18n/master/{{ $lang }}.php || \
               {{ end -}}
               {{ with .Values.config.i18n -}}
               [[ -f {{ . }}.php ]] || \
               wget https://raw.githubusercontent.com/agentejo/cockpit-i18n/master/{{ . }}.php && \
               {{ end -}}
-              echo "yay!"
+              echo "done with language!"
           volumeMounts:
             - name: cockpit-config
               mountPath: /config
